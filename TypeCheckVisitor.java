@@ -1,27 +1,28 @@
-//import cs132.minijava.visitor.GJVisitor;
+import cs132.minijava.visitor.GJVisitor;
 //import cs132.minijava.visitor.GJNoArguVisitor;
-import cs132.minijava.visitor.GJDepthFirst;
+//import cs132.minijava.visitor.GJDepthFirst;
 import cs132.minijava.syntaxtree.*;
 
 
 //public class TypeCheckVisitor implements GJNoArguVisitor<String> {
-public class TypeCheckVisitor implements GJDepthFirst<String, SymbolTable> {
+public class TypeCheckVisitor implements GJVisitor<String, SymbolTable> {
 	private static final String INT = "int";
 	private static final String BOOLEAN = "boolean";
 	private static final String ERROR = "Type Error";
+	private static final String INT_ARRAY = "int[]";
 	
 	public String curr_class;
 	public String curr_method;
 
 	// f0 -> "new" f1 -> Identifier() f2 -> "(" f3 -> ")"
 	public String visit(AllocationExpression n, SymbolTable sym_table) {
-		return "";
+		return n.f1.accept(this, sym_table);
 	}
 	
 	// f0 -> PrimaryExpression() f1 -> "&&" f2 -> PrimaryExpression()
 	public String visit(AndExpression n, SymbolTable sym_table) {
    		System.out.println("IN AND EXPRESSION");
-		if(n.f0.accept(this).equals(BOOLEAN) && n.f2.accept(this).equals(BOOLEAN)){
+		if(n.f0.accept(this, sym_table).equals(BOOLEAN) && n.f2.accept(this, sym_table).equals(BOOLEAN)){
 			return BOOLEAN;
 		} else {
 			return ERROR;
@@ -30,7 +31,11 @@ public class TypeCheckVisitor implements GJDepthFirst<String, SymbolTable> {
 	
 	// f0 -> "new" f1 -> "int" f2 -> "[" f3 -> Expression() f4 -> "]"
 	public String visit(ArrayAllocationExpression n, SymbolTable sym_table) {
-		return "";
+		if(n.f3.accept(this, sym_table).equals(INT)) {
+			return INT_ARRAY;
+		} else {
+			return ERROR;
+		}
 	}
 	
 	// f0 -> Identifier() f1 -> "[" f2 -> Expression() f3 -> "]" f4 -> "=" f5 -> Expression() f6 -> ";"
@@ -40,17 +45,25 @@ public class TypeCheckVisitor implements GJDepthFirst<String, SymbolTable> {
 	
 	// f0 -> PrimaryExpression() f1 -> "." f2 -> "length"
 	public String visit(ArrayLength n, SymbolTable sym_table) {
-		return "";
+		if(n.f0.accept(this, sym_table).equals(INT_ARRAY)) {
+			return INT;
+		} else {	
+			return ERROR;
+		}
 	}
 
 	// f0 -> PrimaryExpression() f1 -> "[" f2 -> PrimaryExpression() f3 -> "]"
 	public String visit(ArrayLookup n, SymbolTable sym_table) {
-		return "";
+		if(n.f0.accept(this, sym_table).equals(INT_ARRAY) && n.f2.accept(this, sym_table).equals(INT)) {
+			return INT;
+		} else {
+			return ERROR;
+		} 
 	}
 	
 	// f0 -> "int" f1 -> "[" f2 -> "]"
 	public String visit(ArrayType n, SymbolTable sym_table) {
-		return "";
+		return INT_ARRAY;
 	}	
 	
 	// f0 -> Identifier() f1 -> "=" f2 -> Expression() f3 -> ";"
@@ -61,7 +74,7 @@ public class TypeCheckVisitor implements GJDepthFirst<String, SymbolTable> {
 	// f0 -> "{" f1 -> ( Statement() )* f2 -> "}"
 	public String visit(Block n, SymbolTable sym_table) {
 		System.out.println("IN BLOCK");
-		return n.f1.accept(this);
+		return n.f1.accept(this, sym_table);
 	}	
 	
 	// f0 -> "boolean"
@@ -72,7 +85,7 @@ public class TypeCheckVisitor implements GJDepthFirst<String, SymbolTable> {
 	// f0 -> "(" f1 -> Expression() f2 -> ")"
     public String visit(BracketExpression n, SymbolTable sym_table) {
     	System.out.println("IN BRACKETEXPRESSION");
-		return n.f1.accept(this);
+		return n.f1.accept(this, sym_table);
     }
     
     // f0 -> "class" f1 -> Identifier() f2 -> "{" f3 -> ( VarDeclaration() )* f4 -> ( MethodDeclaration() )* f5 -> "}"
@@ -87,7 +100,7 @@ public class TypeCheckVisitor implements GJDepthFirst<String, SymbolTable> {
     // f0 -> PrimaryExpression() f1 -> "<" f2 -> PrimaryExpression()
     public String visit(CompareExpression n, SymbolTable sym_table) {
    		System.out.println("IN COMPARE EXPRESSION");
-		if(n.f0.accept(this).equals(INT) && n.f2.accept(this).equals(INT)){
+		if(n.f0.accept(this, sym_table).equals(INT) && n.f2.accept(this, sym_table).equals(INT)){
 			return BOOLEAN;
 		} else {
 			return ERROR;
@@ -96,7 +109,7 @@ public class TypeCheckVisitor implements GJDepthFirst<String, SymbolTable> {
     
     // f0 -> AndExpression() | CompareExpression() | PlusExpression() | MinusExpression() | TimesExpression() | ArrayLookup() | ArrayLength() | MessageSend() | PrimaryExpression()
     public String visit(Expression n, SymbolTable sym_table) {
-        return n.f0.accept(this);
+        return n.f0.accept(this, sym_table);
     }
     
     // f0 -> Expression() f1 -> ( ExpressionRest() )*
@@ -106,7 +119,7 @@ public class TypeCheckVisitor implements GJDepthFirst<String, SymbolTable> {
     
     // f0 -> "," f1 -> Expression()
     public String visit(ExpressionRest n, SymbolTable sym_table) {
-        return "";
+        return n.f1.accept(this, sym_table);
     }
     
     // f0 -> "false"
@@ -133,7 +146,7 @@ public class TypeCheckVisitor implements GJDepthFirst<String, SymbolTable> {
 	// f0 -> MainClass() f1 -> ( TypeDeclaration() )* f2 ->
    	public String visit(Goal n, SymbolTable sym_table) {
    		System.out.println("IN GOAL");
-   		n.f0.accept(this);
+   		n.f0.accept(this, sym_table);
 		return "";
 	}
 	
@@ -144,7 +157,11 @@ public class TypeCheckVisitor implements GJDepthFirst<String, SymbolTable> {
     
     // f0 -> "if" f1 -> "(" f2 -> Expression() f3 -> ")" f4 -> Statement() f5 -> "else" f6 -> Statement()
     public String visit(IfStatement n, SymbolTable sym_table) {
-        return "";
+        if(n.f2.accept(this, sym_table).equals(BOOLEAN) && !n.f4.accept(this, sym_table).equals(ERROR) && !n.f6.accept(this, sym_table).equals(ERROR)) {
+        	return "";
+        } else {
+        	return ERROR;
+        }
     }
     
     // f0 -> 
@@ -160,8 +177,8 @@ public class TypeCheckVisitor implements GJDepthFirst<String, SymbolTable> {
     // f0 -> "class" f1 -> Identifier() f2 -> "{" f3 -> "public" f4 -> "static" f5 -> "void" f6 -> "main" f7 -> "(" f8 -> "String" f9 -> "[" f10 -> "]" f11 -> Identifier() f12 -> ")" f13 -> "{" f14 -> ( VarDeclaration() )* f15 -> ( Statement() )* f16 -> "}" f17 -> "}"
    	public String visit(MainClass n, SymbolTable sym_table) {
    		System.out.println("IN MAINCLASS");
-   		n.f14.accept(this);
-   		n.f15.accept(this);
+   		n.f14.accept(this, sym_table);
+   		n.f15.accept(this, sym_table);
 		return "";
 	}
 	
@@ -178,7 +195,7 @@ public class TypeCheckVisitor implements GJDepthFirst<String, SymbolTable> {
     // f0 -> PrimaryExpression() f1 -> "-" f2 -> PrimaryExpression()
     public String visit(MinusExpression n, SymbolTable sym_table) {
    		System.out.println("IN MINUS EXPRESSION");
-		if(n.f0.accept(this).equals(INT) && n.f2.accept(this).equals(INT)){
+		if(n.f0.accept(this, sym_table).equals(INT) && n.f2.accept(this, sym_table).equals(INT)){
 			return INT;
 		} else {
 			return ERROR;
@@ -208,7 +225,7 @@ public class TypeCheckVisitor implements GJDepthFirst<String, SymbolTable> {
 	// f0 -> "!" f1 -> Expression()
    	public String visit(NotExpression n, SymbolTable sym_table) {
    		System.out.println("IN NOT EXPRESSION");
-		if(n.f1.accept(this).equals(BOOLEAN)){
+		if(n.f1.accept(this, sym_table).equals(BOOLEAN)){
 			return BOOLEAN;
 		} else {
 			return ERROR;
@@ -218,7 +235,7 @@ public class TypeCheckVisitor implements GJDepthFirst<String, SymbolTable> {
 	// f0 -> PrimaryExpression() f1 -> "+" f2 -> PrimaryExpression()
    	public String visit(PlusExpression n, SymbolTable sym_table) {
    		System.out.println("IN PLUS EXPRESSION");
-		if(n.f0.accept(this).equals(INT) && n.f2.accept(this).equals(INT)){
+		if(n.f0.accept(this, sym_table).equals(INT) && n.f2.accept(this, sym_table).equals(INT)){
 			return INT;
 		} else {
 			return ERROR;
@@ -227,14 +244,14 @@ public class TypeCheckVisitor implements GJDepthFirst<String, SymbolTable> {
 	
 	//f0 -> IntegerLiteral() | TrueLiteral() | FalseLiteral() | Identifier() | ThisExpression() | ArrayAllocationExpression() | AllocationExpression() | NotExpression() | BracketExpression()
    	public String visit(PrimaryExpression n, SymbolTable sym_table) {
-		return n.f0.accept(this);
+		return n.f0.accept(this, sym_table);
 	}
 	
 	// f0 -> "System.out.println" f1 -> "(" f2 -> Expression() f3 -> ")" f4 -> ";"
    	public String visit(PrintStatement n, SymbolTable sym_table) {
    		System.out.println("IN PRINTSTATEMENT");
-		if(n.f2.accept(this).equals(INT)){
-			return null;
+		if(n.f2.accept(this, sym_table).equals(INT)){
+			return "";
 		} else {
 			return ERROR;
 		}
@@ -243,7 +260,7 @@ public class TypeCheckVisitor implements GJDepthFirst<String, SymbolTable> {
 	// f0 -> Block() | AssignmentStatement() | ArrayAssignmentStatement() | IfStatement() | WhileStatement() | PrintStatement()
    	public String visit(Statement n, SymbolTable sym_table) {
    		System.out.println("IN STATEMENT");
-		return n.f0.accept(this);
+		return n.f0.accept(this, sym_table);
 	}
 	
 	// f0 -> "this"
@@ -254,7 +271,7 @@ public class TypeCheckVisitor implements GJDepthFirst<String, SymbolTable> {
 	// f0 -> PrimaryExpression() f1 -> "*" f2 -> PrimaryExpression()
    	public String visit(TimesExpression n, SymbolTable sym_table) {
    		System.out.println("IN TIMES EXPRESSION");
-		if(n.f0.accept(this).equals(INT) && n.f2.accept(this).equals(INT)){
+		if(n.f0.accept(this, sym_table).equals(INT) && n.f2.accept(this, sym_table).equals(INT)){
 			return INT;
 		} else {
 			return ERROR;
@@ -269,12 +286,12 @@ public class TypeCheckVisitor implements GJDepthFirst<String, SymbolTable> {
 	
 	// f0 -> ArrayType() | BooleanType() | IntegerType() | Identifier()
    	public String visit(Type n, SymbolTable sym_table) {
-		return n.f0.accept(this);
+		return n.f0.accept(this, sym_table);
 	}
 	
 	// f0 -> ClassDeclaration() | ClassExtendsDeclaration()
    	public String visit(TypeDeclaration n, SymbolTable sym_table) {
-		return n.f0.accept(this);
+		return n.f0.accept(this, sym_table);
 	}
 	
 	// f0 -> Type() f1 -> Identifier() f2 -> ";"
@@ -284,6 +301,10 @@ public class TypeCheckVisitor implements GJDepthFirst<String, SymbolTable> {
 	
 	// f0 -> "while" f1 -> "(" f2 -> Expression() f3 -> ")" f4 -> Statement()
    	public String visit(WhileStatement n, SymbolTable sym_table) {
-		return "";
+		if(n.f3.accept(this, sym_table).equals(BOOLEAN) && !n.f4.accept(this, sym_table).equals(ERROR)) {
+			return "";
+		} else {
+			return ERROR;
+		}
 	}
 }
