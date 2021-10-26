@@ -1,6 +1,7 @@
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
+import cs132.minijava.syntaxtree.*;
 
 public class SymbolTable {
 	public HashMap<String, ClassNode> symbol_table = new HashMap<String, ClassNode>();
@@ -10,9 +11,16 @@ public class SymbolTable {
 		if(!symbol_table.containsKey(class_name)) {
 			symbol_table.put(class_name, class_node);
 			return true;
-		} else {
-			return false;
+		} 
+		return false;
+	}
+	
+	public boolean addParent(String child, String parent) {
+		if(!class_hierarchy.containsKey(child)){
+			class_hierarchy.put(child, parent);
+			return true;
 		}
+		return false;
 	}
 	
 	public boolean containsOverloading(String class_name, MethodNode currMethod) {
@@ -59,6 +67,10 @@ public class SymbolTable {
 		return true;
 	}
 	
+	public boolean isSubtype(String child, String parent) {
+		return true;
+	}
+	
 	public MethodNode methodLookup(String method_name, ClassNode currClass) {
 		if(currClass.methods.containsKey(method_name)) { // no overloading allowed therefore we only need to match the the method name
 			return currClass.methods.get(method_name);
@@ -69,6 +81,7 @@ public class SymbolTable {
 		}
 	}
 	
+	/*
 	public String varLookUp(String var_id, MethodNode currMethod) {
 		if(currMethod.local_vars.containsKey(var_id)){
 			return currMethod.local_vars.get(var_id);
@@ -80,7 +93,32 @@ public class SymbolTable {
 			return null;
 		}
 	}
+	*/
+	public String varLookUp(String var_id, MethodNode currMethod) {
+		if(currMethod.local_vars.containsKey(var_id)){
+			return currMethod.local_vars.get(var_id);
+		} else if(currMethod.parameters.containsKey(var_id)) {
+			return currMethod.parameters.get(var_id);
+		} else {
+			return null;
+		}
+	}
 	
+	public ClassNode varLookUpParent(String class_name, String var_id) {
+		boolean hasParent = class_hierarchy.containsKey(class_name);
+		String parent = class_hierarchy.get(class_name);
+		
+		while(hasParent) {
+			ClassNode currClass = symbol_table.get(parent);
+			if(currClass.fields.containsKey(var_id)) {
+				return currClass;
+			}
+			hasParent = class_hierarchy.containsKey(parent);
+			parent = class_hierarchy.get(parent);
+		}
+		return null;
+	}	
+
 	
 	/*--------------------------------HELPER FUNCTIONS--------------------------------*/
 	
