@@ -112,10 +112,15 @@ public class SymbolTable {
 	}
 	*/
 	public String varLookUp(String var_id, MethodNode currMethod) {
+		//System.out.println("in varlookup, var_id : " + var_id);
+		//System.out.println(currMethod.parameters);
 		if(currMethod.local_vars.containsKey(var_id)){
 			return currMethod.local_vars.get(var_id);
 		} else if(currMethod.parameters.containsKey(var_id)) {
+			//System.out.println("IN para ifState for varlookup");
 			return currMethod.parameters.get(var_id);
+		} else if(symbol_table.get(currMethod.class_name).fields.containsKey(var_id)) {
+			return symbol_table.get(currMethod.class_name).fields.get(var_id);
 		} else {
 			return null;
 		}
@@ -135,6 +140,23 @@ public class SymbolTable {
 		}
 		return null;
 	}	
+	
+	public String completeVarLookUp(String var_id, MethodNode currMethod) {
+		//System.out.println("in varlookup, var_id : " + var_id);
+		//System.out.println(currMethod.parameters);
+		if(currMethod.local_vars.containsKey(var_id)){
+			return currMethod.local_vars.get(var_id);
+		} else if(currMethod.parameters.containsKey(var_id)) {
+			//System.out.println("IN para ifState for varlookup");
+			return currMethod.parameters.get(var_id);
+		} else if(symbol_table.get(currMethod.class_name).fields.containsKey(var_id)) {
+			return symbol_table.get(currMethod.class_name).fields.get(var_id);
+		} else if(class_hierarchy.containsKey(currMethod.class_name)){
+			return completeVarLookUpParent(currMethod.class_name, var_id);
+		} else {
+			return null;
+		}
+	}	
 
 	
 	/*--------------------------------HELPER FUNCTIONS--------------------------------*/
@@ -153,8 +175,8 @@ public class SymbolTable {
 		}
 		return null;	
 	}
-	/*
-	private String varLookUpParent(String class_name, String var_id) {
+	
+	private String completeVarLookUpParent(String class_name, String var_id) {
 		boolean hasParent = class_hierarchy.containsKey(class_name);
 		String parent = class_hierarchy.get(class_name);
 		
@@ -168,5 +190,5 @@ public class SymbolTable {
 		}
 		return null;
 	}
-	*/	
+	
 }
