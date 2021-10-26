@@ -68,7 +68,24 @@ public class SymbolTable {
 	}
 	
 	public boolean isSubtype(String child, String parent) {
-		return true;
+		String curr = child; 
+		if(child.equals(parent)) {
+			return true;
+		}
+		while(class_hierarchy.containsKey(curr)) {
+			if(class_hierarchy.get(curr).equals(parent)) {
+				return true;
+			}
+			curr = class_hierarchy.get(curr);
+		}
+		return false;	
+	}
+	
+	public ClassNode classLookup(String class_name) {
+		if(symbol_table.containsKey(class_name)) {
+			return symbol_table.get(class_name);
+		}
+		return null;
 	}
 	
 	public MethodNode methodLookup(String method_name, ClassNode currClass) {
@@ -136,7 +153,7 @@ public class SymbolTable {
 		}
 		return null;	
 	}
-	
+	/*
 	private String varLookUpParent(String class_name, String var_id) {
 		boolean hasParent = class_hierarchy.containsKey(class_name);
 		String parent = class_hierarchy.get(class_name);
@@ -150,5 +167,6 @@ public class SymbolTable {
 			parent = class_hierarchy.get(parent);
 		}
 		return null;
-	}	
+	}
+	*/	
 }

@@ -3,12 +3,14 @@
 // local variables, and class it belongs to.
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 
 public class MethodNode {
 	public String method_name;
 	public String class_name; 
 	public String return_type;
-	public HashMap<String, String> parameters = new HashMap<String,String>();
+	public LinkedHashMap<String, String> parameters = new LinkedHashMap<String,String>();
+	//public HashMap<String, String> parameters = new HashMap<String,String>();
 	public HashMap<String, String> local_vars = new HashMap<String, String>();
 	
 	public MethodNode(String method_name, String class_name, String return_type) {
