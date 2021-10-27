@@ -68,10 +68,10 @@ public class SymbolTable {
 	}
 	
 	public boolean isSubtype(String child, String parent) {
-		String curr = child; 
 		if(child.equals(parent)) {
 			return true;
 		}
+		String curr = child; 
 		while(class_hierarchy.containsKey(curr)) {
 			if(class_hierarchy.get(curr).equals(parent)) {
 				return true;

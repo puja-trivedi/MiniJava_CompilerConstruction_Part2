@@ -65,11 +65,30 @@ public class TypeCheckVisitor implements GJVisitor<String, SymbolTable> {
 	
 	// f0 -> Identifier() f1 -> "[" f2 -> Expression() f3 -> "]" f4 -> "=" f5 -> Expression() f6 -> ";"
 	public String visit(ArrayAssignmentStatement n, SymbolTable sym_table) {
-		if(n.f0.accept(this, sym_table).equals(INT_ARRAY) && n.f2.accept(this, sym_table).equals(INT) && n.f5.accept(this, sym_table).equals(INT)) {
+		String f0 = n.f0.accept(this, sym_table);
+		String f0_type = sym_table.completeVarLookUp(f0, curr_methodNode); 
+		if(!f0_type.equals(INT_ARRAY)) {
+			return ERROR;
+		}
+   		String f2 = n.f2.accept(this, sym_table);
+   		String f5 = n.f5.accept(this, sym_table);
+		if(f2.equals(INT) && f5.equals(INT)){
 			return "";
 		} else {
-			return ERROR;
-		}	
+			String f2_type = f2;
+			String f5_type = f5;
+			if(!f2.equals(INT)) {
+				f2_type = sym_table.completeVarLookUp(f2, curr_methodNode);
+			}
+			if(!f5.equals(INT)) {
+				f5_type = sym_table.completeVarLookUp(f5, curr_methodNode);
+			}
+			if(f2_type.equals(INT) && f5_type.equals(INT)) {
+				return "";
+			} else {
+				return ERROR;
+			}
+		}
 	}
 	
 	// f0 -> PrimaryExpression() f1 -> "." f2 -> "length"
@@ -119,16 +138,15 @@ public class TypeCheckVisitor implements GJVisitor<String, SymbolTable> {
 	public String visit(AssignmentStatement n, SymbolTable sym_table) {
 		//System.out.print("Assigment Statement FOR: ");
 		
-		String var_id = n.f0.accept(this, sym_table);
+		String lhs = n.f0.accept(this, sym_table);
 		//System.out.println(var_id);
 		String lhs_type;
-		
 		ClassNode lhs_class;
-		if((lhs_type = sym_table.varLookUp(var_id, curr_methodNode)) == null) {
-			if((lhs_class = sym_table.varLookUpParent(curr_class, var_id)) == null){
+		if((lhs_type = sym_table.varLookUp(lhs, curr_methodNode)) == null) {
+			if((lhs_class = sym_table.varLookUpParent(curr_class, lhs)) == null){
 				return ERROR;
 			}
-			lhs_type = lhs_class.fields.get(var_id);
+			lhs_type = lhs_class.fields.get(lhs);
 		}
 		//System.out.println("LHS type: " + lhs_type);
 		
@@ -137,8 +155,7 @@ public class TypeCheckVisitor implements GJVisitor<String, SymbolTable> {
 		ClassNode rhs_class;
 		if((rhs_type = sym_table.varLookUp(rhs, curr_methodNode)) == null) {
 			if((rhs_class = sym_table.varLookUpParent(curr_class, rhs)) == null){
-				rhs_type = rhs;
-				//rhs_class = sym_table.classLookup(rhs);
+				rhs_type = rhs; //this means the RHS is "new className()"
 			} else {
 				rhs_type = rhs_class.fields.get(rhs);
 			}
@@ -191,17 +208,7 @@ public class TypeCheckVisitor implements GJVisitor<String, SymbolTable> {
     
     // f0 -> "class" f1 -> Identifier() f2 -> "{" f3 -> ( VarDeclaration() )* f4 -> ( MethodDeclaration() )* f5 -> "}"
     public String visit(ClassDeclaration n, SymbolTable sym_table) {
-        /* 1. update currentClass
-           2. lookup class in sym_table
-           3. check that fields are distinct (in stv.java)
-           4. check that methods are distinct (in stv.java)
-        */ 
-        curr_class = n.f1.f0.toString();
-        
-        // **** MAYBE REMOVE THESE LINES
-        if(!sym_table.symbol_table.containsKey(curr_class)) {
-        	return ERROR;
-        }
+        curr_class = n.f1.accept(this, sym_table);
         curr_classNode = sym_table.symbol_table.get(curr_class);
         
         for(Node md : n.f4.nodes) {
@@ -217,19 +224,11 @@ public class TypeCheckVisitor implements GJVisitor<String, SymbolTable> {
     }
     // f0 -> "class" f1 -> Identifier() f2 -> "extends" f3 -> Identifier() f4 -> "{" f5 -> ( VarDeclaration() )* f6 -> ( MethodDeclaration() )* f7 -> "}"
     public String visit(ClassExtendsDeclaration n, SymbolTable sym_table) {
-    	/* 1. update currentClass
-           2. lookup class in sym_table
-           3. check that fields are distinct 
-           4. check that methods are distinct
-           5. check for overloading 
-        */
-        curr_class = n.f1.f0.toString();
-        
-        // **** MAYBE REMOVE THESE LINES
-        if(!sym_table.symbol_table.containsKey(curr_class)) {
-        	return ERROR;
-        }
+        curr_class = n.f1.accept(this, sym_table);
         curr_classNode = sym_table.symbol_table.get(curr_class);
+        
+        String parent_class = n.f3.accept(this, sym_table);
+        sym_table.addParent(curr_class, parent_class);
         
         for(Node md : n.f6.nodes) {
         	if(md.accept(this, sym_table).equals(ERROR)) {
@@ -238,7 +237,6 @@ public class TypeCheckVisitor implements GJVisitor<String, SymbolTable> {
         }
         
         // check for overloading 
-
         for(Map.Entry<String, MethodNode> method : curr_classNode.methods.entrySet()) {
         	if(sym_table.containsOverloading(curr_class, method.getValue())) {
         		return ERROR;
@@ -289,7 +287,7 @@ public class TypeCheckVisitor implements GJVisitor<String, SymbolTable> {
     				return ERROR;
     			}
     		}
-	}
+		}
     	return "";
     }
     
@@ -347,14 +345,13 @@ public class TypeCheckVisitor implements GJVisitor<String, SymbolTable> {
     // f0 -> "if" f1 -> "(" f2 -> Expression() f3 -> ")" f4 -> Statement() f5 -> "else" f6 -> Statement()
     public String visit(IfStatement n, SymbolTable sym_table) {
     	//System.out.println("IN IF STATEMENT");
-
-    	Boolean f2_type = n.f2.accept(this, sym_table).equals(BOOLEAN);
+		String f2 = n.f2.accept(this, sym_table);
     	String f4 = n.f4.accept(this, sym_table); 
-    	//System.out.println("F4: " + f4); 
     	String f6 = n.f6.accept(this, sym_table);
-    	//System.out.println("F6: " + f6);
-   
-        if(f2_type && (!f4.equals(ERROR)) && (!f6.equals(ERROR))) {
+		if(!f2.equals(BOOLEAN)){
+			f2 = sym_table.completeVarLookUp(f2, curr_methodNode);
+		}
+        if(f2.equals(BOOLEAN) && (!f4.equals(ERROR)) && (!f6.equals(ERROR))) {
         	return "";
         } else {
         	return ERROR;
@@ -375,25 +372,16 @@ public class TypeCheckVisitor implements GJVisitor<String, SymbolTable> {
    	public String visit(MainClass n, SymbolTable sym_table) {
    		isStatic = true;
    		curr_class = n.f1.accept(this, sym_table);
+   		curr_classNode = sym_table.symbol_table.get(curr_class);
    		curr_method = "main";
-   		
-         // **** MAYBE REMOVE THESE LINES
-        if(!sym_table.symbol_table.containsKey(curr_class)) {
-        	return ERROR;
-        }
-        curr_classNode = sym_table.symbol_table.get(curr_class);
-        
-        if((curr_methodNode = sym_table.methodLookup(curr_method, curr_classNode)) == null) {
-        	return ERROR;
-        }
-		
-		// DO WE NEED TO LOOK AT VAR DEC??
+		curr_methodNode = sym_table.methodLookup(curr_method, curr_classNode);
 		
 		for(Node s : n.f15.nodes) {
 			if(s.accept(this, sym_table).equals(ERROR)) {
 				return ERROR;
 			}
 		}
+		
        	curr_methodNode = null;
        	curr_method = null; 
        	curr_class = null;
@@ -452,39 +440,31 @@ public class TypeCheckVisitor implements GJVisitor<String, SymbolTable> {
     public String visit(MethodDeclaration n, SymbolTable sym_table) {
     	//System.out.println("METHOD DEC");
     	curr_method = n.f2.accept(this, sym_table);
-        if((curr_methodNode = sym_table.methodLookup(curr_method, curr_classNode)) == null) {
-        	return ERROR;
-        }
+        curr_methodNode = sym_table.methodLookup(curr_method, curr_classNode);
         
-        // FORMAL PARAMETERS?
-        
-        // VAR DECS?
-        
-        // type check each statement
         for(Node s : n.f8.nodes) {
         	if(s.accept(this, sym_table).equals(ERROR)) {
         		return ERROR;
         	}
         }
+        
         //System.out.println("END OF METHOD DEC1");
+        
         // check that the return statement is the correct type
-        String return_stat = n.f10.accept(this, sym_table);
-        String r_type;
-        if(return_stat.equals(INT_ARRAY) || return_stat.equals(INT) || return_stat.equals(BOOLEAN)) {
-		    if(return_stat.equals(curr_methodNode.return_type)) {
-		    	return return_stat;
+        String f10 = n.f10.accept(this, sym_table);
+        if(f10.equals(INT_ARRAY) || f10.equals(INT) || f10.equals(BOOLEAN)) {
+		    if(!f10.equals(curr_methodNode.return_type)) {
+		    	return ERROR;
 		    } 
-        } else if((r_type = sym_table.varLookUp(return_stat, curr_methodNode)) != null) {
-        	if(r_type.equals(curr_methodNode.return_type)) {
-        		return r_type;
-        	}
-        } else if((r_type = sym_table.varLookUpParent(curr_class, return_stat).fields.get(return_stat)) != null) {
-        	if(r_type.equals(curr_methodNode.return_type)) {
-        		return r_type;
-        	}
+        } else {
+			f10 = sym_table.completeVarLookUp(f10, curr_methodNode);
+			if(!f10.equals(curr_methodNode.return_type)) {
+		    	return ERROR;
+		    }
         }
         
         //System.out.println("END OF METHOD DEC");
+        
         curr_method = null;
         curr_methodNode = null;
         return "";
@@ -581,18 +561,17 @@ public class TypeCheckVisitor implements GJVisitor<String, SymbolTable> {
 	// f0 -> "//System.out.println" f1 -> "(" f2 -> Expression() f3 -> ")" f4 -> ";"
    	public String visit(PrintStatement n, SymbolTable sym_table) {
    		//System.out.println("IN PRINTSTATEMENT");
-   		String exp = n.f2.accept(this, sym_table); 
-   		if(exp.equals(ERROR)) {
-   			return ERROR;
-   		} else if(exp.equals(INT)) {
-   			return "";
-   		} else if(sym_table.varLookUp(exp, curr_methodNode).equals(INT)) {
-   			return "";
-   		} else if(sym_table.varLookUpParent(curr_class, exp).fields.get(exp).equals(INT)) {
-   			return "";
-   		} else {
-   			return ERROR;
-   		}
+   		String f2 = n.f2.accept(this, sym_table);
+		if(f2.equals(INT)){
+			return INT;
+		} else {
+			String f2_type = sym_table.completeVarLookUp(f2, curr_methodNode);
+			if(f2_type.equals(INT)) {
+				return INT;
+			} else {
+				return ERROR;
+			}
+		}
 	}
 	
 	// f0 -> Block() | AssignmentStatement() | ArrayAssignmentStatement() | IfStatement() | WhileStatement() | PrintStatement()
@@ -660,18 +639,12 @@ public class TypeCheckVisitor implements GJVisitor<String, SymbolTable> {
 	// f0 -> "while" f1 -> "(" f2 -> Expression() f3 -> ")" f4 -> Statement()
    	public String visit(WhileStatement n, SymbolTable sym_table) {
    	    //System.out.println("IN WHILE STATEMENT");
-   	    
-   	    String f2;
-		String f2_type;
-
-		if(!((f2 = n.f2.accept(this, sym_table)).equals(BOOLEAN))) {
-			f2_type = sym_table.completeVarLookUp(f2, curr_methodNode);
-		} else {
-			f2_type = f2;
+   		String f2 = n.f2.accept(this, sym_table);
+   		String f4 = n.f4.accept(this, sym_table);
+		if(!f2.equals(BOOLEAN)){
+			f2 = sym_table.completeVarLookUp(f2, curr_methodNode);
 		}
-		
-   	    
-		if(f2_type.equals(BOOLEAN) && !n.f4.accept(this, sym_table).equals(ERROR)) {
+		if(f2.equals(BOOLEAN) && !f4.equals(ERROR)) {
 			return "";
 		} else {
 			return ERROR;
