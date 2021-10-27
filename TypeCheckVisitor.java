@@ -27,20 +27,40 @@ public class TypeCheckVisitor implements GJVisitor<String, SymbolTable> {
 	// f0 -> PrimaryExpression() f1 -> "&&" f2 -> PrimaryExpression()
 	public String visit(AndExpression n, SymbolTable sym_table) {
    		//System.out.println("IN AND EXPRESSION");
-		if(n.f0.accept(this, sym_table).equals(BOOLEAN) && n.f2.accept(this, sym_table).equals(BOOLEAN)){
+   		String f0 = n.f0.accept(this, sym_table);
+   		String f2 = n.f2.accept(this, sym_table);
+		if(f0.equals(BOOLEAN) && f2.equals(BOOLEAN)){
 			return BOOLEAN;
 		} else {
-			return ERROR;
+			String f0_type = f0;
+			String f2_type = f2;
+			if(!f0.equals(BOOLEAN)) {
+				f0_type = sym_table.completeVarLookUp(f0, curr_methodNode);
+			}
+			if(!f2.equals(BOOLEAN)) {
+				f2_type = sym_table.completeVarLookUp(f2, curr_methodNode);
+			}
+			if(f0_type.equals(BOOLEAN) && f2_type.equals(BOOLEAN)) {
+				return BOOLEAN;
+			} else {
+				return ERROR;
+			}
 		}
 	}
 	
 	// f0 -> "new" f1 -> "int" f2 -> "[" f3 -> Expression() f4 -> "]"
 	public String visit(ArrayAllocationExpression n, SymbolTable sym_table) {
-		if(n.f3.accept(this, sym_table).equals(INT)) {
+   		String f3 = n.f3.accept(this, sym_table);
+		if(f3.equals(INT)){
 			return INT_ARRAY;
 		} else {
-			return ERROR;
-		}
+			String f3_type = sym_table.completeVarLookUp(f3, curr_methodNode);
+			if(f3_type.equals(INT)) {
+				return INT_ARRAY;
+			} else {
+				return ERROR;
+			}
+		}	
 	}
 	
 	// f0 -> Identifier() f1 -> "[" f2 -> Expression() f3 -> "]" f4 -> "=" f5 -> Expression() f6 -> ";"
@@ -54,20 +74,40 @@ public class TypeCheckVisitor implements GJVisitor<String, SymbolTable> {
 	
 	// f0 -> PrimaryExpression() f1 -> "." f2 -> "length"
 	public String visit(ArrayLength n, SymbolTable sym_table) {
-		if(n.f0.accept(this, sym_table).equals(INT_ARRAY)) {
+   		String f0 = n.f0.accept(this, sym_table);
+		if(f0.equals(INT_ARRAY)){
 			return INT;
-		} else {	
-			return ERROR;
+		} else {
+			String f0_type = sym_table.completeVarLookUp(f0, curr_methodNode);
+			if(f0_type.equals(INT_ARRAY)) {
+				return INT;
+			} else {
+				return ERROR;
+			}
 		}
 	}
 
 	// f0 -> PrimaryExpression() f1 -> "[" f2 -> PrimaryExpression() f3 -> "]"
 	public String visit(ArrayLookup n, SymbolTable sym_table) {
-		if(n.f0.accept(this, sym_table).equals(INT_ARRAY) && n.f2.accept(this, sym_table).equals(INT)) {
+   		String f0 = n.f0.accept(this, sym_table);
+   		String f2 = n.f2.accept(this, sym_table);
+		if(f0.equals(INT_ARRAY) && f2.equals(INT)){
 			return INT;
 		} else {
-			return ERROR;
-		} 
+			String f0_type = f0;
+			String f2_type = f2;
+			if(!f0.equals(INT_ARRAY)) {
+				f0_type = sym_table.completeVarLookUp(f0, curr_methodNode);
+			}
+			if(!f2.equals(INT)) {
+				f2_type = sym_table.completeVarLookUp(f2, curr_methodNode);
+			}
+			if(f0_type.equals(INT_ARRAY) && f2_type.equals(INT)) {
+				return INT;
+			} else {
+				return ERROR;
+			}
+		}	
 	}
 	
 	// f0 -> "int" f1 -> "[" f2 -> "]"
@@ -136,7 +176,17 @@ public class TypeCheckVisitor implements GJVisitor<String, SymbolTable> {
 	// f0 -> "(" f1 -> Expression() f2 -> ")"
     public String visit(BracketExpression n, SymbolTable sym_table) {
     	//System.out.println("IN BRACKETEXPRESSION");
-		return n.f1.accept(this, sym_table);
+   		String f1 = n.f1.accept(this, sym_table);
+		if(f1.equals(INT_ARRAY) || f1.equals(INT) || f1.equals(BOOLEAN)){
+			return f1;
+		} else {
+			String f1_type = sym_table.completeVarLookUp(f1, curr_methodNode);
+			if(f1_type != null) {
+				return f1_type;
+			} else {
+				return ERROR;
+			}
+		}
     }
     
     // f0 -> "class" f1 -> Identifier() f2 -> "{" f3 -> ( VarDeclaration() )* f4 -> ( MethodDeclaration() )* f5 -> "}"
@@ -203,46 +253,25 @@ public class TypeCheckVisitor implements GJVisitor<String, SymbolTable> {
     // f0 -> PrimaryExpression() f1 -> "<" f2 -> PrimaryExpression()
     public String visit(CompareExpression n, SymbolTable sym_table) {
    		//System.out.println("IN COMPARE EXPRESSION");
-   		/*
-		if(n.f0.accept(this, sym_table).equals(INT) && n.f2.accept(this, sym_table).equals(INT)){
+   		String f0 = n.f0.accept(this, sym_table);
+   		String f2 = n.f2.accept(this, sym_table);
+		if(f0.equals(INT) && f2.equals(INT)){
 			return BOOLEAN;
 		} else {
-			return ERROR;
-		}
-		*/
-		String f0;
-		String f1;
-		String f0_type;
-		String f1_type;
-		if(!((f0 = n.f0.accept(this, sym_table)).equals(INT))) {
-			f0_type = sym_table.varLookUp(f0, curr_methodNode);
-			if(!f0_type.equals(INT)){
-				f0_type = sym_table.varLookUpParent(curr_class, f0).fields.get(f0);
-				if(!f0_type.equals(INT)){
-					return ERROR;
-				}
+			String f0_type = f0;
+			String f2_type = f2;
+			if(!f0.equals(INT)) {
+				f0_type = sym_table.completeVarLookUp(f0, curr_methodNode);
 			}
-		} else {
-			f0_type = f0;
-		}
-		
-		
-		if(!((f1 = n.f2.accept(this, sym_table)).equals(INT))) {
-			f1_type = sym_table.varLookUp(f1, curr_methodNode);
-			if(!f1_type.equals(INT)){
-				f1_type = sym_table.varLookUpParent(curr_class, f1).fields.get(f1);
-				if(!f1_type.equals(INT)){
-					return ERROR;
-				}
+			if(!f2.equals(INT)) {
+				f2_type = sym_table.completeVarLookUp(f2, curr_methodNode);
 			}
-		} else {
-			f1_type = f1;
+			if(f0_type.equals(INT) && f2_type.equals(INT)) {
+				return BOOLEAN;
+			} else {
+				return ERROR;
+			}
 		}
-		
-		if(f0_type.equals(INT) && f1_type.equals(INT)) {
-			return BOOLEAN;
-		}
-		return ERROR;
     }
     
     // f0 -> AndExpression() | CompareExpression() | PlusExpression() | MinusExpression() | TimesExpression() | ArrayLookup() | ArrayLength() | MessageSend() | PrimaryExpression()
@@ -260,7 +289,7 @@ public class TypeCheckVisitor implements GJVisitor<String, SymbolTable> {
     				return ERROR;
     			}
     		}
-    	}
+	}
     	return "";
     }
     
@@ -464,10 +493,24 @@ public class TypeCheckVisitor implements GJVisitor<String, SymbolTable> {
     // f0 -> PrimaryExpression() f1 -> "-" f2 -> PrimaryExpression()
     public String visit(MinusExpression n, SymbolTable sym_table) {
    		//System.out.println("IN MINUS EXPRESSION");
-		if(n.f0.accept(this, sym_table).equals(INT) && n.f2.accept(this, sym_table).equals(INT)){
+   		String f0 = n.f0.accept(this, sym_table);
+   		String f2 = n.f2.accept(this, sym_table);
+		if(f0.equals(INT) && f2.equals(INT)){
 			return INT;
 		} else {
-			return ERROR;
+			String f0_type = f0;
+			String f2_type = f2;
+			if(!f0.equals(INT)) {
+				f0_type = sym_table.completeVarLookUp(f0, curr_methodNode);
+			}
+			if(!f2.equals(INT)) {
+				f2_type = sym_table.completeVarLookUp(f2, curr_methodNode);
+			}
+			if(f0_type.equals(INT) && f2_type.equals(INT)) {
+				return INT;
+			} else {
+				return ERROR;
+			}
 		}
     }
     
@@ -493,57 +536,41 @@ public class TypeCheckVisitor implements GJVisitor<String, SymbolTable> {
 	
 	// f0 -> "!" f1 -> Expression()
    	public String visit(NotExpression n, SymbolTable sym_table) {
-   		//System.out.println("IN NOT EXPRESSION");
-		if(n.f1.accept(this, sym_table).equals(BOOLEAN)){
+   		String f1 = n.f1.accept(this, sym_table);
+		if(f1.equals(BOOLEAN)){
 			return BOOLEAN;
 		} else {
-			return ERROR;
+			String f1_type = sym_table.completeVarLookUp(f1, curr_methodNode);
+			if(f1_type.equals(BOOLEAN)) {
+				return BOOLEAN;
+			} else {
+				return ERROR;
+			}
 		}
 	}
 	
 	// f0 -> PrimaryExpression() f1 -> "+" f2 -> PrimaryExpression()
    	public String visit(PlusExpression n, SymbolTable sym_table) {
    		//System.out.println("IN PLUS EXPRESSION");
-   		/*
-		if(n.f0.accept(this, sym_table).equals(INT) && n.f2.accept(this, sym_table).equals(INT)){
+   		String f0 = n.f0.accept(this, sym_table);
+   		String f2 = n.f2.accept(this, sym_table);
+		if(f0.equals(INT) && f2.equals(INT)){
 			return INT;
 		} else {
-			return ERROR;
-		}
-		*/
-		String f0;
-		String f1;
-		String f0_type;
-		String f1_type;
-		if(!((f0 = n.f0.accept(this, sym_table)).equals(INT))) {
-			f0_type = sym_table.varLookUp(f0, curr_methodNode);
-			if(!f0_type.equals(INT)){
-				f0_type = sym_table.varLookUpParent(curr_class, f0).fields.get(f0);
-				if(!f0_type.equals(INT)){
-					return ERROR;
-				}
+			String f0_type = f0;
+			String f2_type = f2;
+			if(!f0.equals(INT)) {
+				f0_type = sym_table.completeVarLookUp(f0, curr_methodNode);
 			}
-		} else {
-			f0_type = f0;
-		}
-		
-		
-		if(!((f1 = n.f2.accept(this, sym_table)).equals(INT))) {
-			f1_type = sym_table.varLookUp(f1, curr_methodNode);
-			if(!f1_type.equals(INT)){
-				f1_type = sym_table.varLookUpParent(curr_class, f1).fields.get(f1);
-				if(!f1_type.equals(INT)){
-					return ERROR;
-				}
+			if(!f2.equals(INT)) {
+				f2_type = sym_table.completeVarLookUp(f2, curr_methodNode);
 			}
-		} else {
-			f1_type = f1;
+			if(f0_type.equals(INT) && f2_type.equals(INT)) {
+				return INT;
+			} else {
+				return ERROR;
+			}
 		}
-		
-		if(f0_type.equals(INT) && f1_type.equals(INT)) {
-			return INT;
-		}
-		return ERROR;
 	}
 	
 	//f0 -> IntegerLiteral() | TrueLiteral() | FalseLiteral() | Identifier() | ThisExpression() | ArrayAllocationExpression() | AllocationExpression() | NotExpression() | BracketExpression()
@@ -588,10 +615,24 @@ public class TypeCheckVisitor implements GJVisitor<String, SymbolTable> {
 	// f0 -> PrimaryExpression() f1 -> "*" f2 -> PrimaryExpression()
    	public String visit(TimesExpression n, SymbolTable sym_table) {
    		//System.out.println("IN TIMES EXPRESSION");
-		if(n.f0.accept(this, sym_table).equals(INT) && n.f2.accept(this, sym_table).equals(INT)){
+   		String f0 = n.f0.accept(this, sym_table);
+   		String f2 = n.f2.accept(this, sym_table);
+		if(f0.equals(INT) && f2.equals(INT)){
 			return INT;
 		} else {
-			return ERROR;
+			String f0_type = f0;
+			String f2_type = f2;
+			if(!f0.equals(INT)) {
+				f0_type = sym_table.completeVarLookUp(f0, curr_methodNode);
+			}
+			if(!f2.equals(INT)) {
+				f2_type = sym_table.completeVarLookUp(f2, curr_methodNode);
+			}
+			if(f0_type.equals(INT) && f2_type.equals(INT)) {
+				return INT;
+			} else {
+				return ERROR;
+			}
 		}
 	}
 	

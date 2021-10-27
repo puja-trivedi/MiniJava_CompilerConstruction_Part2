@@ -15,7 +15,7 @@ public class Typecheck {
 			//System.out.print("DONE WITH TCV, PRINTING RESULT: ");
 			//System.out.println(result2);
 			if(!result || ("Type Error").equals(result2)) {
-				System.out.println("Type Error");
+				System.out.println("Type error");
 			} else {
 				System.out.println("Program type checked successfully");
 			}
@@ -29,7 +29,7 @@ public class Typecheck {
 			*/
 		} catch (Exception e) {
 			//System.out.println("Catch Statement: Type Error");
-			System.out.println("Type Error");
+			System.out.println("Type error");
 			//exit(0);
 		}
 	}
